@@ -6,11 +6,12 @@ import (
 	"fmt"
 	"strings"
 
+	"reflect"
+
 	"github.com/docker/docker/pkg/urlutil"
 	"github.com/portainer/libcompose/utils"
 	composeYaml "github.com/portainer/libcompose/yaml"
 	"gopkg.in/yaml.v2"
-	"reflect"
 )
 
 var (
@@ -31,13 +32,14 @@ func CreateConfig(bytes []byte) (*Config, error) {
 		return nil, err
 	}
 
-	if config.Version != "2" {
-		var baseRawServices RawServiceMap
-		if err := yaml.Unmarshal(bytes, &baseRawServices); err != nil {
-			return nil, err
-		}
-		config.Services = baseRawServices
-	}
+	// if config.Version != "2" {
+	// if strings.HasPrefix(config.Version, "2") == false {
+	// 	var baseRawServices RawServiceMap
+	// 	if err := yaml.Unmarshal(bytes, &baseRawServices); err != nil {
+	// 		return nil, err
+	// 	}
+	// 	config.Services = baseRawServices
+	// }
 
 	if config.Volumes == nil {
 		config.Volumes = make(map[string]interface{})
@@ -102,7 +104,8 @@ func Merge(existingServices *ServiceConfigs, environmentLookup EnvironmentLookup
 	}
 
 	var serviceConfigs map[string]*ServiceConfig
-	if config.Version == "2" {
+	// if config.Version == "2" {
+	if strings.HasPrefix(config.Version, "1") == false {
 		var err error
 		serviceConfigs, err = MergeServicesV2(existingServices, environmentLookup, resourceLookup, file, baseRawServices, options)
 		if err != nil {
