@@ -76,7 +76,8 @@ func volumes(c *config.ServiceConfig, ctx project.Context) []string {
 	for _, v := range c.Volumes.Volumes {
 		vol := v
 		if len(ctx.ComposeFiles) > 0 && !project.IsNamedVolume(v.Source) {
-			sourceVol := ctx.ResourceLookup.ResolvePath(v.String(), ctx.ComposeFiles[0])
+			// sourceVol := ctx.ResourceLookup.ResolvePath(v.String(), ctx.ComposeFiles[0])
+			sourceVol := v.String()
 			vol.Source = strings.SplitN(sourceVol, ":", 2)[0]
 		}
 		volumes = append(volumes, vol.String())

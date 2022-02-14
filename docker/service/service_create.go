@@ -4,19 +4,57 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"golang.org/x/net/context"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/docker/docker/api/types"
+	"github.com/docker/docker/api/types/container"
 	containertypes "github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/filters"
+	"github.com/docker/docker/api/types/network"
+	dockerclient "github.com/docker/docker/client"
 	"github.com/portainer/libcompose/config"
 	composecontainer "github.com/portainer/libcompose/docker/container"
 	"github.com/portainer/libcompose/labels"
 	"github.com/portainer/libcompose/project"
 	"github.com/portainer/libcompose/project/events"
 	util "github.com/portainer/libcompose/utils"
+	"github.com/portainer/portainer/folder"
+	"github.com/portainer/portainer/http/handler/endpointproxy"
 )
+
+func (s *Service) validPortCheckForCreate(config *container.Config, hostConfig *container.HostConfig, networkingConfig *network.NetworkingConfig, client dockerclient.VolumeAPIClient) (bool, error) {
+	FolderService, _ := folder.NewService()
+
+	//check the mount point is in a shared folder
+	pathList, errRetriveFolderList := FolderService.GetFolderList()
+	if errRetriveFolderList != nil {
+		msg := "Please try again. If the error continues, please contact our technical support engineers."
+		// return false, &httperror.HandlerError{http.StatusInternalServerError, msg, err}
+		return false, fmt.Errorf(msg)
+	}
+	var volumes endpointproxy.VolumeRes
+	ctx, _ := context.WithTimeout(context.Background(), 10000*time.Millisecond)
+	args := filters.NewArgs()
+	res, _ := client.VolumeList(ctx, args)
+	// Catch timeout exception
+
+	// Print warning message
+	// volumes.Warnings = strings.Join(res.Warnings, "")
+	for _, val := range res.Volumes {
+		volumes.Volumes = append(volumes.Volumes, endpointproxy.Volumes{Name: val.Name})
+	}
+
+	_, errmsg := endpointproxy.CheckBind(hostConfig.Binds, volumes, pathList)
+
+	if errmsg != "" {
+		return false, fmt.Errorf(errmsg)
+	}
+
+	return true, nil
+}
 
 func (s *Service) createContainer(ctx context.Context, namer Namer, oldContainer string, configOverride *config.ServiceConfig, oneOff bool) (*composecontainer.Container, error) {
 	serviceConfig := s.serviceConfig
@@ -47,6 +85,12 @@ func (s *Service) createContainer(ctx context.Context, namer Namer, oldContainer
 
 	// FIXME(vdemeester): oldContainer should be a Container instead of a string
 	client := s.clientFactory.Create(s)
+
+	_, err = s.validPortCheckForCreate(configWrapper.Config, configWrapper.HostConfig, configWrapper.NetworkingConfig, client)
+	if err != nil {
+		return nil, err
+	}
+
 	if oldContainer != "" {
 		info, err := client.ContainerInspect(ctx, oldContainer)
 		if err != nil {
