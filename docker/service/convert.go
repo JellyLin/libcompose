@@ -263,6 +263,7 @@ func Convert(c *config.ServiceConfig, ctx project.Context, clientFactory compose
 		},
 		NetworkMode:    container.NetworkMode(networkMode),
 		ReadonlyRootfs: c.ReadOnly,
+		Runtime:        c.Runtime,
 		OomScoreAdj:    int(c.OomScoreAdj),
 		PidMode:        container.PidMode(c.Pid),
 		UTSMode:        container.UTSMode(c.Uts),

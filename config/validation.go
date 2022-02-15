@@ -175,6 +175,7 @@ func validateV2(serviceMap RawServiceMap) error {
 	dataLoader := gojsonschema.NewGoLoader(serviceMap)
 
 	result, err := gojsonschema.Validate(schemaLoaderV2, dataLoader)
+	return nil
 	if err != nil {
 		return err
 	}
